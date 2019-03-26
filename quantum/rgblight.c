@@ -392,16 +392,20 @@ void rgblight_disable_noeeprom(void) {
 
 
 // Deals with the messy details of incrementing an integer
-static uint8_t increment( uint8_t value, uint8_t step, uint8_t min, uint8_t max ) {
-    int16_t new_value = value;
-    new_value += step;
-    return MIN( MAX( new_value, min ), max );
+static uint8_t increment(uint8_t val, uint8_t step, uint8_t max)
+{
+  if (val > max - step) {
+    return max;
+  }
+  return val + step;
 }
 
-static uint8_t decrement( uint8_t value, uint8_t step, uint8_t min, uint8_t max ) {
-    int16_t new_value = value;
-    new_value -= step;
-    return MIN( MAX( new_value, min ), max );
+static uint8_t decrement(uint8_t val, uint8_t step, uint8_t min)
+{
+  if (val < min + step) {
+    return min;
+  }
+  return val - step;
 }
 
 void rgblight_increase_hue_helper(bool write_to_eeprom) {
@@ -431,12 +435,7 @@ void rgblight_decrease_hue(void) {
   rgblight_decrease_hue_helper(true);
 }
 void rgblight_increase_sat_helper(bool write_to_eeprom) {
-  uint8_t sat;
-  if (rgblight_config.sat + RGBLIGHT_SAT_STEP > 255) {
-    sat = 255;
-  } else {
-    sat = rgblight_config.sat + RGBLIGHT_SAT_STEP;
-  }
+  uint8_t sat = increment(rgblight_config.sat, RGBLIGHT_SAT_STEP, 255);
   rgblight_sethsv_eeprom_helper(rgblight_config.hue, sat, rgblight_config.val, write_to_eeprom);
 }
 void rgblight_increase_sat_noeeprom(void) {
@@ -446,12 +445,7 @@ void rgblight_increase_sat(void) {
   rgblight_increase_sat_helper(true);
 }
 void rgblight_decrease_sat_helper(bool write_to_eeprom) {
-  uint8_t sat;
-  if (rgblight_config.sat - RGBLIGHT_SAT_STEP < 0) {
-    sat = 0;
-  } else {
-    sat = rgblight_config.sat - RGBLIGHT_SAT_STEP;
-  }
+  uint8_t sat = decrement(rgblight_config.sat, RGBLIGHT_SAT_STEP, 0);
   rgblight_sethsv_eeprom_helper(rgblight_config.hue, sat, rgblight_config.val, write_to_eeprom);
 }
 void rgblight_decrease_sat_noeeprom(void) {
@@ -461,12 +455,7 @@ void rgblight_decrease_sat(void) {
   rgblight_decrease_sat_helper(true);
 }
 void rgblight_increase_val_helper(bool write_to_eeprom) {
-  uint8_t val;
-  if (rgblight_config.val + RGBLIGHT_VAL_STEP > RGBLIGHT_LIMIT_VAL) {
-    val = RGBLIGHT_LIMIT_VAL;
-  } else {
-    val = rgblight_config.val + RGBLIGHT_VAL_STEP;
-  }
+  uint8_t val = increment(rgblight_config.val, RGBLIGHT_VAL_STEP, RGBLIGHT_LIMIT_VAL);
   rgblight_sethsv_eeprom_helper(rgblight_config.hue, rgblight_config.sat, val, write_to_eeprom);
 }
 void rgblight_increase_val_noeeprom(void) {
@@ -476,12 +465,7 @@ void rgblight_increase_val(void) {
   rgblight_increase_val_helper(true);
 }
 void rgblight_decrease_val_helper(bool write_to_eeprom) {
-  uint8_t val;
-  if (rgblight_config.val - RGBLIGHT_VAL_STEP < 0) {
-    val = 0;
-  } else {
-    val = rgblight_config.val - RGBLIGHT_VAL_STEP;
-  }
+  uint8_t val = decrement(rgblight_config.val, RGBLIGHT_VAL_STEP, 0);
   rgblight_sethsv_eeprom_helper(rgblight_config.hue, rgblight_config.sat, val, write_to_eeprom);
 }
 void rgblight_decrease_val_noeeprom(void) {
@@ -491,12 +475,12 @@ void rgblight_decrease_val(void) {
   rgblight_decrease_val_helper(true);
 }
 void rgblight_increase_speed(void) {
-    rgblight_config.speed = increment( rgblight_config.speed, 1, 0, 3 );
+    rgblight_config.speed = increment(rgblight_config.speed, 1, 3);
     eeconfig_update_rgblight(rgblight_config.raw);//EECONFIG needs to be increased to support this
 }
 
 void rgblight_decrease_speed(void) {
-    rgblight_config.speed = decrement( rgblight_config.speed, 1, 0, 3 );
+    rgblight_config.speed = decrement(rgblight_config.speed, 1, 0);
     eeconfig_update_rgblight(rgblight_config.raw);//EECONFIG needs to be increased to support this
 }
 
@@ -621,7 +605,7 @@ void rgblight_sethsv_at(uint16_t hue, uint8_t sat, uint8_t val, uint8_t index) {
   || defined(RGBLIGHT_EFFECT_SNAKE) || defined(RGBLIGHT_EFFECT_KNIGHT)
 
 static uint8_t get_interval_time(const uint8_t* default_interval_address, uint8_t velocikey_min, uint8_t velocikey_max) {
-  return 
+  return
 #ifdef VELOCIKEY_ENABLE
     velocikey_enabled() ? velocikey_match_speed(velocikey_min, velocikey_max) :
 #endif
@@ -813,7 +797,7 @@ void rgblight_effect_breathing(uint8_t interval) {
   float val;
 
   uint8_t interval_time = get_interval_time(&RGBLED_BREATHING_INTERVALS[interval], 1, 100);
-  
+
   if (timer_elapsed(last_timer) < interval_time) {
     return;
   }
